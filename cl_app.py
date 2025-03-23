@@ -1,8 +1,7 @@
 import os
 from openai import AsyncOpenAI
-
 import chainlit as cl
-from chainlit.input_widget import Select
+from chainlit.input_widget import Select, TextInput
 
 openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
@@ -29,7 +28,7 @@ deepseek_settings = {
 }
 
 gemini_settings = {
-    "model": "gemini-2.0-flash",
+    "model": "gemini-1.5-pro",
     "temperature": 0.7,
     "max_tokens": 1000,
     "top_p": 1,
@@ -38,30 +37,41 @@ gemini_settings = {
 models = {
         "Deepseek R1": {"client": deepseek_client, "settings": deepseek_settings},
         "gpt-3.5-turbo": {"client": openai_client, "settings": openai_settings},
-        "gemini-2.0-flash": {"client": gemini_client, "settings": gemini_settings},
+        "gemini-1.5-pro": {"client": gemini_client, "settings": gemini_settings},
 }
 
 
 #defaults 
 client = openai_client
 model_settings = openai_settings
+default_instruction = "You are a helpful assistant"
+
+@cl.step(type="retrieval")
+def get_docs(query: str) -> list[str]: 
+    """
+        Retrieve relevant text chunks from the vdb
+    """
+    return [""]
 
 @cl.on_chat_start
 async def start():
-    settings = await cl.ChatSettings(
+    await cl.ChatSettings(
             [
             Select(
-                id="Model",
+                id="model",
                 label="LLM Model",
-                values=["Deepseek R1", "gpt-3.5-turbo","gemini-2.0-flash"],
+                values=["gpt-3.5-turbo", "Deepseek R1", "gemini-1.5-pro"],
                 initial_index=0,
-            ),]).send()
+            ),
+            TextInput(id="instruction",label="Instruction")]).send()
+
 
     cl.user_session.set(
         "message_history",
-        [{"role": "system", "content": "You are a helpful assistant."}],
+        [{"role": "system", "content": default_instruction}],
     )
-    await cl.Message(content="Connected to Chainlit!").send()
+    await cl.Message(content="Connected to RejuvenAI!").send()
+
 
 @cl.on_settings_update
 async def setup_agent(settings):
@@ -69,14 +79,22 @@ async def setup_agent(settings):
     global client, model_settings
 
     try: 
-        model_name = settings.get("Model")
+        model_name = settings.get("model")
+        instruction = settings.get("instruction")
     except KeyError as e: 
         print(e)
-        
+
+    if instruction: 
+        message_history=cl.user_session.get("message_history")
+        print(f"updating base instruction to: {instruction}")
+        message_history[0]["content"] = instruction
+
+        cl.user_session.set("message_history",message_history)
+
     client = models.get(model_name).get("client")
     model_settings = models.get(model_name).get("settings")
 
-    print("on_settings_update", settings)
+    print("new settings received", settings)
 
 
 @cl.on_message
