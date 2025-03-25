@@ -9,7 +9,7 @@ API_ROUTER = APIRouter()
 PROTECTED = [Depends(is_logged_in)]
 
 # User endpoint
-API_ROUTER.add_api_route("user/register", endpoint=user_register_api_view, methods=["post"])
+# API_ROUTER.add_api_route("user/register", endpoint=user_register_api_view, methods=["post"])
 API_ROUTER.add_api_route("user/login/{identity}", endpoint=user_login_api_view, methods=["get"])
 
 # Files endpoint

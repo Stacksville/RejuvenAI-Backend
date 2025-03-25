@@ -10,5 +10,5 @@ async def user_login_api_view(identity: str, request: Request):
     return await _authenticate_user(request, user)
 
 
-def user_register_api_view(request: Request):
-    raise NotImplementedError
+# def user_register_api_view(request: Request):
+#     raise NotImplementedError
