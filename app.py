@@ -1,3 +1,6 @@
+import os
+from contextlib import asynccontextmanager
+
 from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
 
@@ -5,8 +8,21 @@ from config.db import engine
 from config.middleware import exceptions_middleware
 from config.router import API_ROUTER
 from db import core
+from populate import load_knowledge_base
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("loading knowledge base")
+    source = os.environ["DATASET"]
+    load_knowledge_base(source)
+    try:
+        yield
+    finally:
+        print("RejuvenAI shutting down...")
+
+
+app = FastAPI(lifespan=lifespan)
 
 VERSION = 1
 

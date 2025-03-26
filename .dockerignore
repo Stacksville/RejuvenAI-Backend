@@ -1,0 +1,5 @@
+__pycache__/
+.git/
+.files/
+vdb_rejuvenai/
+record_manager_cache.sql

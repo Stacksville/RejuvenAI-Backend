@@ -1,21 +1,23 @@
 import os
-from openai import AsyncOpenAI
 import chainlit as cl
 from chainlit.input_widget import Select, TextInput
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema import StrOutputParser
+from langchain.schema.runnable import RunnableConfig, RunnablePassthrough
+from langchain.callbacks.base import BaseCallbackHandler
+from vectordb import get_vectordb
 
-openai_client = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-deepseek_client = AsyncOpenAI(api_key=os.environ["DEEPSEEK_API_KEY"], base_url="https://api.deepseek.com")
-
-gemini_client = AsyncOpenAI(api_key=os.environ["GEMINI_API_KEY"], base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
-
-openai_settings = {
-    "model": "gpt-3.5-turbo",
+openai_settings = {   
+    "model": "gpt-4",
     "temperature": 0.7,
     "max_tokens": 500,
     "top_p": 1,
     "frequency_penalty": 0,
     "presence_penalty": 0,
+    "api_key": os.environ["OPENAI_API_KEY"],
+    "streaming": True, 
+
 }
 
 deepseek_settings = {
@@ -25,6 +27,9 @@ deepseek_settings = {
     "top_p": 1,
     "frequency_penalty": 0,
     "presence_penalty": 0,
+    "base_url": "https://api.deepseek.com",
+    "api_key": os.environ["DEEPSEEK_API_KEY"],
+    "streaming": True, 
 }
 
 gemini_settings = {
@@ -32,86 +37,138 @@ gemini_settings = {
     "temperature": 0.7,
     "max_tokens": 1000,
     "top_p": 1,
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+    "api_key": os.environ["GEMINI_API_KEY"],
+    "streaming": True, 
+
 }
 
-models = {
-        "Deepseek R1": {"client": deepseek_client, "settings": deepseek_settings},
-        "gpt-3.5-turbo": {"client": openai_client, "settings": openai_settings},
-        "gemini-1.5-pro": {"client": gemini_client, "settings": gemini_settings},
+
+
+#initalize RAG
+vectordb = get_vectordb()
+
+#initialize model clients
+openai_model = ChatOpenAI(**openai_settings)
+deepseek_model = ChatOpenAI(**deepseek_settings)
+gemini_model = ChatOpenAI(**gemini_settings)
+
+model_selector = {
+        "Deepseek R1": deepseek_model,
+        "gpt-4": openai_model,
+        "gemini-1.5-pro": gemini_model,
 }
 
+#default model
+model = openai_model
 
-#defaults 
-client = openai_client
-model_settings = openai_settings
-default_instruction = "You are a helpful assistant"
+template = """Answer the question based only on the following context:
 
-@cl.step(type="retrieval")
-def get_docs(query: str) -> list[str]: 
-    """
-        Retrieve relevant text chunks from the vdb
-    """
-    return [""]
+{context}
+
+Question: {question}
+"""
+prompt = ChatPromptTemplate.from_template(template)
+
+def format_docs(docs):
+    return "\n\n".join([d.page_content for d in docs])
+
+retriever = vectordb.as_retriever()
 
 @cl.on_chat_start
 async def start():
+
     await cl.ChatSettings(
             [
             Select(
                 id="model",
                 label="LLM Model",
-                values=["gpt-3.5-turbo", "Deepseek R1", "gemini-1.5-pro"],
+                values=["gpt-4", "Deepseek R1", "gemini-1.5-pro"],
                 initial_index=0,
             ),
-            TextInput(id="instruction",label="Instruction")]).send()
+            #TextInput(id="instruction",label="Instruction"),
+        ],
+    ).send()
 
+    runnable_sequence = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt 
+        | model
+        | StrOutputParser()
 
-    cl.user_session.set(
-        "message_history",
-        [{"role": "system", "content": default_instruction}],
     )
+
+    cl.user_session.set("runnable", runnable_sequence)
+
     await cl.Message(content="Connected to RejuvenAI!").send()
 
 
 @cl.on_settings_update
 async def setup_agent(settings):
   
-    global client, model_settings
+    global model
 
     try: 
         model_name = settings.get("model")
-        instruction = settings.get("instruction")
     except KeyError as e: 
         print(e)
 
-    if instruction: 
-        message_history=cl.user_session.get("message_history")
-        print(f"updating base instruction to: {instruction}")
-        message_history[0]["content"] = instruction
-
-        cl.user_session.set("message_history",message_history)
-
-    client = models.get(model_name).get("client")
-    model_settings = models.get(model_name).get("settings")
-
     print("new settings received", settings)
+    model = model_selector.get(model_name)
+    
+    print("setting new model")
+
+    rs = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt 
+        | model
+        | StrOutputParser()
+
+    )
+
+    cl.user_session.set("runnable", rs)
+    print("set the new runnable seq successfully")
+    
 
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    message_history = cl.user_session.get("message_history")
-    message_history.append({"role": "user", "content": message.content})
+
+    runnable = cl.user_session.get("runnable")
 
     msg = cl.Message(content="")
+
+    class PostMessageHandler(BaseCallbackHandler):
+        """
+        Callback handler for handling the retriever and LLM processes.
+        Used to post the sources of the retrieved documents as a Chainlit element.
+        """
+
+        def __init__(self, msg: cl.Message):
+            BaseCallbackHandler.__init__(self)
+            self.msg = msg
+            self.sources = set()  # To store unique pairs
+
+        def on_retriever_end(self, documents, *, run_id, parent_run_id, **kwargs):
+            for d in documents:
+                source_page_pair = (d.metadata["source"], d.metadata["page"])
+                self.sources.add(source_page_pair)  # Add unique pairs to the set
+
+        def on_llm_end(self, response, *, run_id, parent_run_id, **kwargs):
+            if len(self.sources):
+                sources_text = "\n".join(
+                    [f"{source}#page={page}" for source, page in self.sources]
+                )
+                self.msg.elements.append(
+                    cl.Text(name="Sources", content=sources_text, display="inline")
+                )
+
+    async for chunk in runnable.astream(
+        message.content,
+        config=RunnableConfig(
+            callbacks=[cl.LangchainCallbackHandler(), PostMessageHandler(msg)]
+        ),
+    ):
+        await msg.stream_token(chunk)
+
     await msg.send()
-
-    stream = await client.chat.completions.create(
-        messages=message_history, stream=True, **model_settings
-    )
-
-    async for part in stream:
-        if token := part.choices[0].delta.content or "":
-            await msg.stream_token(token)
-
-    message_history.append({"role": "assistant", "content": msg.content})
-    await msg.update()
