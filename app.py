@@ -1,11 +1,25 @@
+import os 
 from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
-
+from contextlib import asynccontextmanager
 from chainlit.user import User
 from chainlit.utils import mount_chainlit
 from chainlit.server import _authenticate_user
+from vectordb import mock_knowledge_base
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI): 
+    if os.environ["REJUVENAI_ENV"] == "TEST": 
+        print("initializing TEST vectordb...")
+        mock_knowledge_base("./tests/mock_data/")
+    try: 
+        yield
+    finally: 
+        print("RejuvenAI shutting down...")
+
+
+app = FastAPI(lifespan=lifespan)
 
 """
 cl_app.add_middleware(
