@@ -46,7 +46,7 @@ gemini_settings = {
 
 
 #initalize RAG
-vectordb = get_vectordb(mock=True)
+vectordb = get_vectordb()
 
 #initialize model clients
 openai_model = ChatOpenAI(**openai_settings)
