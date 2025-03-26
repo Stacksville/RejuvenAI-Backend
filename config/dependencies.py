@@ -15,7 +15,8 @@ from fastapi import Request, Depends, APIRouter
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWSError, jws
 
-from config.fastapi import JWTConfigs
+from config.fastapi import app_settings
+
 from definitions import exceptions, schema
 
 # Sets up necessary objects
@@ -38,7 +39,7 @@ async def is_logged_in(
 
     try:
         payload = jws.verify(
-            token=inp_token, key=JWTConfigs.PUBLIC_KEY, algorithms=JWTConfigs.SIGNATURE_ALGORITHM
+            token=inp_token, key=app_settings.JWT.PUBLIC_KEY, algorithms=app_settings.JWT.SIGNATURE_ALGORITHM
         ).decode("utf-8")
         user_identifier = str(json.loads(payload).get("data", {}).get("identifier", ""))
     except KeyError as e:

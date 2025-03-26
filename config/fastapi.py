@@ -4,8 +4,12 @@ from pydantic_settings import BaseSettings
 
 JWT_PUBLIC_KEY = """
 -----BEGIN PUBLIC KEY-----
-<Key-Here>
+<public-key-here>
 -----END PUBLIC KEY-----
+"""
+
+JWT_PRIVATE_KEY = """
+<private-key-here>
 """
 
 
@@ -22,11 +26,15 @@ class AppEnv(Enum):
 
 
 class S3Bucket(BaseSettings):
-    ENDPOINT: str = ""
+    AWS_ACCESS_KEY_ID = ""
+    AWS_SECRET_ACCESS_KEY = ""
+    AWS_REGION = ""
+    S3_BUCKET_NAME = ""
 
 
 class JWTConfigs(BaseSettings):
     PUBLIC_KEY = JWT_PUBLIC_KEY
+    PRIVATE_KEY = JWT_PRIVATE_KEY
     SIGNATURE_ALGORITHM = "RS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 45
 
@@ -38,4 +46,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     JWT: JWTConfigs = JWTConfigs
-    S3Bucket: S3Bucket = S3Bucket
+    S3: S3Bucket = S3Bucket
+
+
+app_settings = Settings()
