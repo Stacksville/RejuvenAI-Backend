@@ -55,9 +55,8 @@ def mock_knowledge_base(datasource_path: str) -> None:
     if not docs: 
         print("No mock documents found in the specified directory. Exiting...")
         raise SystemExit
-    #doc_search = Chroma.from_documents(docs, embeddings_model) 
 
-    vectordb.add_documents(documents=docs)
+    #vectordb.add_documents(documents=docs)
 
 
     namespace = "chromadb/rejuvenai"
