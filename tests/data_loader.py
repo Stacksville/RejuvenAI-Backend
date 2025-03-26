@@ -1,6 +1,7 @@
 from vectordb import get_vectordb
+
 def main(): 
-    vectordb = get_vectordb(mock=True)
+    vectordb = get_vectordb()
 
     query = "why is attention important?"
     docs = vectordb.similarity_search(query)

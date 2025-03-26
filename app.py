@@ -5,14 +5,14 @@ from contextlib import asynccontextmanager
 from chainlit.user import User
 from chainlit.utils import mount_chainlit
 from chainlit.server import _authenticate_user
-from vectordb import mock_knowledge_base
+from populate import load_knowledge_base
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI): 
-    if os.environ["REJUVENAI_ENV"] == "TEST": 
-        print("initializing TEST vectordb...")
-        mock_knowledge_base("./tests/mock_data/")
+    print("loading knowledge base")
+    source = os.environ["DATASET"]
+    load_knowledge_base(source)
     try: 
         yield
     finally: 
