@@ -33,3 +33,7 @@ def retrieve_file(filename: str):
         return {"message": "File retrieved successfully", "url": file_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# TODO: Add files mapping to files table
+# TODO: Add API to get list of all files
+# TODO: Add API to bulk upload files
