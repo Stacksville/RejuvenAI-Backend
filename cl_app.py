@@ -86,7 +86,7 @@ async def start():
                 values=["gpt-4", "Deepseek R1", "gemini-1.5-pro"],
                 initial_index=0,
             ),
-            #TextInput(id="instruction",label="Instruction"),
+            TextInput(id="instruction",label="Instruction"),
         ],
     ).send()
 
