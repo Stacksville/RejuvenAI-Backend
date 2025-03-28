@@ -1,5 +1,5 @@
 # prepopulates vector embeddings into the vectordb
-
+import itertools
 from pathlib import Path
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.indexes import IndexingResult, SQLRecordManager, index
@@ -9,7 +9,6 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
-from datasets import load_dataset
 from vectordb import get_vectordb 
 
 def process_pdf_docs(datasource_path: str) -> list[Document]: 
@@ -17,13 +16,16 @@ def process_pdf_docs(datasource_path: str) -> list[Document]:
         processes locally stored pdf documents into a list of Document objects
     """
 
-    pdf_directory = Path(datasource_path)
+    directory = Path(datasource_path)
     docs = []  ##type: List[Document]
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=250)
 
-    for pdf_path in pdf_directory.glob("*.pdf"):
-        loader = PyMuPDFLoader(str(pdf_path))
+    extensions  = ["*.pdf", "*.docx"]
+    files = list(itertools.chain.from_iterable(directory.glob(ext) for ext in extensions))
+
+    for file in files:
+        loader = PyMuPDFLoader(str(file), mode="page")
         documents = loader.load()
         docs += text_splitter.split_documents(documents)
 
@@ -81,8 +83,9 @@ def index_documents(docs: list[Document], vectordb: VectorStore, source_field: s
 def load_knowledge_base(dataset: str): 
 
     dataset_selector = {
-        "MOCK": {"source": "./tests/mock_data/",  "func": process_pdf_docs,"source_field": "source"},
-        "BIOASQ": {"source": "enelpol/rag-mini-bioasq", "func": process_hf_ds, "source_field": "id"}
+        "MOCK": {"source": "./data/mock_data/",  "func": process_pdf_docs,"source_field": "source"},
+        "BIOASQ": {"source": "enelpol/rag-mini-bioasq", "func": process_hf_ds, "source_field": "id"},
+        "PROD": {"source": "./data/prod/", "func": process_pdf_docs, "source_field": "source"}
     }
 
     ds_conf = dataset_selector.get(dataset)
