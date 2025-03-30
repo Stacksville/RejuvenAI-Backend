@@ -4,11 +4,12 @@ from contextlib import asynccontextmanager
 # import chainlit as cl
 from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
-
+import uvicorn
 from config.db import Base
 from config.db import engine
 from config.middleware import exceptions_middleware
 from config.router import API_ROUTER
+from config.fastapi import app_settings, AppEnv
 from populate import load_knowledge_base
 
 
@@ -56,7 +57,6 @@ cl_app.add_middleware(
 #         return {"username": "admin", "role": "admin"}  # Successful authentication
 #     return None  # Deny access
 
-# DEBUG MODE: Uncomment to debug locally using breakpoints
-# import uvicorn
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+# DEBUG MODE
+if app_settings.APP_ENV == AppEnv.LOCAL:
+    uvicorn.run(app, host="0.0.0.0", port=8000)
