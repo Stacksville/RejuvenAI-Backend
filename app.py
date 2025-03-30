@@ -24,6 +24,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+# app = FastAPI()
+
+mount_chainlit(app=app, target="cl_app.py", path="/chat")
 
 VERSION = 1
 
@@ -35,6 +38,7 @@ Base.metadata.create_all(bind=engine)
 
 # Middleware Configurations
 app.middleware('http')(exceptions_middleware)
+
 """
 cl_app.add_middleware(
     CORSMiddleware,
@@ -44,8 +48,6 @@ cl_app.add_middleware(
     allow_headers=["*"],
 )
 """
-
-mount_chainlit(app=app, target="cl_app.py", path="/chat")
 
 # Authentication Hook
 # @cl.on_auth
