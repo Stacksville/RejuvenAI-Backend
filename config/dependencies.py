@@ -38,7 +38,7 @@ async def is_logged_in(
     inp_token = credentials.credentials
 
     try:
-        payload = jws.verify(token=inp_token, key=app_settings.JWT.PUBLIC_KEY, algorithms=app_settings.JWT.SIGNATURE_ALGORITHM).decode("utf-8")
+        payload = jws.verify(token=inp_token, key=app_settings.JWT_PUBLIC_KEY, algorithms=app_settings.JWT_SIGNATURE_ALGORITHM).decode("utf-8")
         username = str(json.loads(payload).get("data", {}).get("username", ""))
     except KeyError as e:
         syslog.syslog(f"Invalid JWT: field missing: {e} Headers: {request.headers}")

@@ -21,25 +21,23 @@ class AppEnv(Enum):
     PROD: str = "production"
 
 
-class S3Bucket(BaseSettings):
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_REGION: str = "us-east-2"
-    S3_BUCKET_NAME: str = "rejuvenai-staging"
-
-
-class JWTConfigs(BaseSettings):
-    PUBLIC_KEY: str = JWT_PUBLIC_KEY
-    PRIVATE_KEY: str = JWT_PRIVATE_KEY
-    SIGNATURE_ALGORITHM: str = "RS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
-
-
 class Settings(BaseSettings):
     SERVER_NAME: str = "RejuvenAI"
     # LOG_FILE: str = "/var/log/rejuvenAI.log"
     APP_ENV: AppEnv = AppEnv.LOCAL
     DEBUG: bool = True
+
+
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    S3_AWS_REGION: str = "us-east-2"
+    S3_BUCKET_NAME: str = "rejuvenai-staging"
+
+    # AWS S3 Configs
+    JWT_PUBLIC_KEY: str = JWT_PUBLIC_KEY
+    JWT_PRIVATE_KEY: str = JWT_PRIVATE_KEY
+    JWT_SIGNATURE_ALGORITHM: str = "RS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
 
     # JWT: JWTConfigs = JWTConfigs
     # S3: S3Bucket = S3Bucket
