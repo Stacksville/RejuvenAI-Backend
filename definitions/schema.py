@@ -14,4 +14,4 @@ class Base:
 
 @dataclass
 class User(Base):
-    identifier: str
+    username: str

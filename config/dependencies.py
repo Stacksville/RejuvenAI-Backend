@@ -38,10 +38,8 @@ async def is_logged_in(
     inp_token = credentials.credentials
 
     try:
-        payload = jws.verify(
-            token=inp_token, key=app_settings.JWT.PUBLIC_KEY, algorithms=app_settings.JWT.SIGNATURE_ALGORITHM
-        ).decode("utf-8")
-        user_identifier = str(json.loads(payload).get("data", {}).get("identifier", ""))
+        payload = jws.verify(token=inp_token, key=app_settings.JWT.PUBLIC_KEY, algorithms=app_settings.JWT.SIGNATURE_ALGORITHM).decode("utf-8")
+        username = str(json.loads(payload).get("data", {}).get("username", ""))
     except KeyError as e:
         syslog.syslog(f"Invalid JWT: field missing: {e} Headers: {request.headers}")
         raise exceptions.InvalidJWSException from e
@@ -49,6 +47,6 @@ async def is_logged_in(
         syslog.syslog("Failed to verify JWS")
         raise exceptions.InvalidJWSException from e
 
-    syslog.syslog(f"Request from {user_identifier=}")
-    request.state.user_identifier = user_identifier
-    return schema.User(identifier=user_identifier)
+    syslog.syslog(f"Request from {username=}")
+    request.state.username = username
+    return schema.User(username=username)

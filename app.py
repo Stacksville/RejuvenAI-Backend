@@ -1,13 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
+# import chainlit as cl
 from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
 
+from config.db import Base
 from config.db import engine
 from config.middleware import exceptions_middleware
 from config.router import API_ROUTER
-from db import core
 from populate import load_knowledge_base
 
 
@@ -27,10 +28,10 @@ app = FastAPI(lifespan=lifespan)
 VERSION = 1
 
 # API Router Configurations
-app.include_router(API_ROUTER, prefix=f"api/v{VERSION}")
+app.include_router(API_ROUTER, prefix=f"/api/v{VERSION}")
 
 # Database Configurations
-core.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 # Middleware Configurations
 app.middleware('http')(exceptions_middleware)
@@ -45,6 +46,13 @@ cl_app.add_middleware(
 """
 
 mount_chainlit(app=app, target="cl_app.py", path="/chat")
+
+# Authentication Hook
+# @cl.on_auth
+# def authenticate(token: str):
+#     if is_logged_in():
+#         return {"username": "admin", "role": "admin"}  # Successful authentication
+#     return None  # Deny access
 
 # DEBUG MODE: Uncomment to debug locally using breakpoints
 # import uvicorn

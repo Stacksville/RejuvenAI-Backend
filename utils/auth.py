@@ -1,5 +1,4 @@
-import datetime
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -33,18 +32,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    expire = datetime.datetime.now(
-        tz=datetime.UTC) + (expires_delta or timedelta(minutes=app_settings.JWT.ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(tz=timezone.utc) + (expires_delta or timedelta(minutes=app_settings.JWT.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, app_settings.JWT.PRIVATE_KEY, algorithm=app_settings.JWT.SIGNATURE_ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, app_settings.JWT.PRIVATE_KEY, algorithms=[app_settings.JWT.SIGNATURE_ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        return username
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+# def get_current_user(token: str = Depends(oauth2_scheme)):
+#     try:
+#         payload = jwt.decode(token, app_settings.JWT.PRIVATE_KEY, algorithms=[app_settings.JWT.SIGNATURE_ALGORITHM])
+#         username: str = payload.get("sub")
+#         if username is None:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+#         return username
+#     except jwt.PyJWTError:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
