@@ -16,7 +16,7 @@ def login(login_form: LoginRequestForm, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
     payload = {"username": user.username, "identity": "admin", "role": "admin"}
-    token = create_access_token({"sub": payload})
+    token = create_access_token({"sub": user.username, "data": payload})
     return {"access_token": token, "token_type": "bearer"}
 
 
