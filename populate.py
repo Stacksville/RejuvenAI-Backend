@@ -19,7 +19,7 @@ def process_pdf_docs(datasource_path: str) -> list[Document]:
     directory = Path(datasource_path)
     docs = []  ##type: List[Document]
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=250)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
     extensions  = ["*.pdf", "*.docx"]
     files = list(itertools.chain.from_iterable(directory.glob(ext) for ext in extensions))
@@ -80,12 +80,30 @@ def index_documents(docs: list[Document], vectordb: VectorStore, source_field: s
 
     return index_result
 
+def is_context_loaded(): 
+    try: 
+        vdb = get_vectordb()
+        documents = vdb.get(limit=5)["documents"]
+
+    except KeyError: 
+        return False 
+
+    if len(documents) > 1: 
+        return True
+
+    return False
+    
+
 def load_knowledge_base(dataset: str): 
+
+    if is_context_loaded(): 
+        print("A vectordb was found. Skipping indexing process")
+        return
 
     dataset_selector = {
         "MOCK": {"source": "./data/mock_data/",  "func": process_pdf_docs,"source_field": "source"},
         "BIOASQ": {"source": "enelpol/rag-mini-bioasq", "func": process_hf_ds, "source_field": "id"},
-        "PROD": {"source": "./data/prod/", "func": process_pdf_docs, "source_field": "source"}
+        "PROD": {"source": "./data/prod_data/", "func": process_pdf_docs, "source_field": "source"}
     }
 
     ds_conf = dataset_selector.get(dataset)

@@ -10,7 +10,7 @@ def get_vectordb()-> VectorStore:
         Action is idempotent. 
     """
 
-    embeddings_model = OpenAIEmbeddings()
+    embeddings_model = OpenAIEmbeddings(model="text-embedding-3-large")
 
     db_name = "vdb_rejuvenai"
 

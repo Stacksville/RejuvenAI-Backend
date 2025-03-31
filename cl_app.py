@@ -9,9 +9,9 @@ from langchain.callbacks.base import BaseCallbackHandler
 from vectordb import get_vectordb
 
 openai_settings = {   
-    "model": "gpt-4",
-    "temperature": 0.7,
-    "max_tokens": 500,
+    "model": "gpt-4o",
+    "temperature": 1.0,
+    "max_tokens": 4000,
     "top_p": 1,
     "frequency_penalty": 0,
     "presence_penalty": 0,
@@ -22,11 +22,11 @@ openai_settings = {
 
 deepseek_settings = {
     "model": "deepseek-reasoner",
-    "temperature": 0.5,
-    "max_tokens": 500,
+    #"temperature": 1.0,
+    "max_tokens": 4500,
     "top_p": 1,
-    "frequency_penalty": 0,
-    "presence_penalty": 0,
+    #"frequency_penalty": 0,
+    #"presence_penalty": 0,
     "base_url": "https://api.deepseek.com",
     "api_key": os.environ["DEEPSEEK_API_KEY"],
     "streaming": True, 
@@ -35,7 +35,7 @@ deepseek_settings = {
 gemini_settings = {
     "model": "gemini-1.5-pro",
     "temperature": 0.7,
-    "max_tokens": 1000,
+    "max_tokens": 10000,
     "top_p": 1,
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
     "api_key": os.environ["GEMINI_API_KEY"],
@@ -62,7 +62,13 @@ model_selector = {
 #default model
 model = openai_model
 
-template = """Answer the question based only on the following context:
+template = """
+you are a peer-like virtual assistant that has reference and database of knowledge to assist providers and staff in answering clinical questions. Respond in a concise, text-style manner that mirrors the user's tone and style, but lean towards technical and medical language.
+
+Provide clinical guidance and support to help staff make educated decisions regarding patient cases and answer questions they or their patients may have.
+Prioritize research and objective data found in uploaded knowledge documents over internet resources.
+Use the abbreviations list provided in the Knowledge section to improve interpretation of the prompts and information in database.
+Answer the question based on the following context:
 
 {context}
 
@@ -73,7 +79,7 @@ prompt = ChatPromptTemplate.from_template(template)
 def format_docs(docs):
     return "\n\n".join([d.page_content for d in docs])
 
-retriever = vectordb.as_retriever()
+retriever = vectordb.as_retriever(search_kwargs = {"k":10})
 
 @cl.on_chat_start
 async def start():
