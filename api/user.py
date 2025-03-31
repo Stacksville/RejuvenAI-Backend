@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 
 from config.db import get_db
 from db import Users
-from definitions.forms import LoginRequestForm
+from definitions.schema import LoginRequestSchema
 from utils.auth import verify_password, create_access_token, get_password_hash
 
 
-def login(login_form: LoginRequestForm, db: Session = Depends(get_db)):
+def login(login_form: LoginRequestSchema, db: Session = Depends(get_db)):
     # curl -X POST "http://127.0.0.1:8000/login" -d "username=testuser&password=1234"
     user = db.query(Users).filter(Users.username == login_form.username).first()
     if not user:

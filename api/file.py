@@ -1,7 +1,11 @@
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ConnectionError
-from fastapi import File, UploadFile, HTTPException
+from fastapi import Depends, HTTPException
+from fastapi import File, UploadFile
 from fastapi import Request
+from sqlalchemy.orm import Session
+from db.core import Files
 
+from config.db import get_db
 from config.fastapi import app_settings
 from utils.s3 import get_s3_client
 
@@ -9,6 +13,7 @@ from utils.s3 import get_s3_client
 async def upload_file(request: Request, file: UploadFile = File(...)):
     # TODO: Add files mapping to files table
     # TODO: Add API to bulk upload files
+    # TODO: Check: File size / type etc
     username = request.state.username
     try:
         s3_client = get_s3_client()
@@ -25,9 +30,11 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def retrieve_files_list(request: Request):
+def retrieve_files_list(db: Session = Depends(get_db)):
     # Returns list of all files associated with user
-    raise NotImplementedError
+    payload = [{"id": 1, "name": "sample.pdf", "type": "pdf", "status": "processing"}]
+    # db.query(Files).all()
+    return payload
 
 # def download_file(filename: str):
 #     # try:

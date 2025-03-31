@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+from pydantic import BaseModel
 
 
 @dataclass
@@ -15,3 +16,11 @@ class Base:
 @dataclass
 class User(Base):
     username: str
+
+
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Request Schema >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+class LoginRequestSchema(BaseModel):
+    username: str
+    password: str
+
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Response Schema >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
