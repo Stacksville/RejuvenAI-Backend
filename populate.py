@@ -1,10 +1,11 @@
 # prepopulates vector embeddings into the vectordb
-
+import itertools
 from pathlib import Path
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.indexes import IndexingResult, SQLRecordManager, index
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
+    HuggingFaceDatasetLoader,
 )
 from langchain_core.documents import Document
 from langchain_core.vectorstores import VectorStore
@@ -15,13 +16,16 @@ def process_pdf_docs(datasource_path: str) -> list[Document]:
         processes locally stored pdf documents into a list of Document objects
     """
 
-    pdf_directory = Path(datasource_path)
+    directory = Path(datasource_path)
     docs = []  ##type: List[Document]
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
-    for pdf_path in pdf_directory.glob("*.pdf"):
-        loader = PyMuPDFLoader(str(pdf_path))
+    extensions  = ["*.pdf", "*.docx"]
+    files = list(itertools.chain.from_iterable(directory.glob(ext) for ext in extensions))
+
+    for file in files:
+        loader = PyMuPDFLoader(str(file), mode="page")
         documents = loader.load()
         docs += text_splitter.split_documents(documents)
 
@@ -32,11 +36,30 @@ def process_pdf_docs(datasource_path: str) -> list[Document]:
 
     return docs
 
-def process_hf_ds() -> list[Document]: 
+def process_hf_ds(repo: str) -> list[Document]: 
+    #dataset = load_dataset(repo, "text-corpus", split="test")
     docs =[]
+    
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+
+    loader = HuggingFaceDatasetLoader(path=repo, page_content_column="passage",name="text-corpus")
+
+    limit = 50
+
+    documents = loader.load()
+    docs += text_splitter.split_documents(documents[:limit])
+
+    for doc in docs: 
+        print(doc.metadata)
+
+    if not docs: 
+        print("No mock documents found in the specified directory. Exiting...")
+        raise SystemExit
+
+
     return docs
 
-def index_documents(docs: list[Document], vectordb: VectorStore) -> IndexingResult: 
+def index_documents(docs: list[Document], vectordb: VectorStore, source_field: str) -> IndexingResult: 
     """
         Indexes documents into a vectordb
     """
@@ -52,29 +75,49 @@ def index_documents(docs: list[Document], vectordb: VectorStore) -> IndexingResu
         record_manager,
         vectordb,
         cleanup="incremental",
-        source_id_key="source",
+        source_id_key=source_field,
     )
 
     return index_result
 
+def is_context_loaded(): 
+    try: 
+        vdb = get_vectordb()
+        documents = vdb.get(limit=5)["documents"]
+
+    except KeyError: 
+        return False 
+
+    if len(documents) > 1: 
+        return True
+
+    return False
+    
+
 def load_knowledge_base(dataset: str): 
+
+    if is_context_loaded(): 
+        print("A vectordb was found. Skipping indexing process")
+        return
+
+    dataset_selector = {
+        "MOCK": {"source": "./data/mock_data/",  "func": process_pdf_docs,"source_field": "source"},
+        "BIOASQ": {"source": "enelpol/rag-mini-bioasq", "func": process_hf_ds, "source_field": "id"},
+        "PROD": {"source": "./data/prod_data/", "func": process_pdf_docs, "source_field": "source"}
+    }
+
+    ds_conf = dataset_selector.get(dataset)
+    if not ds_conf: 
+        raise KeyError("Invalid DATASET value")
 
     vdb = get_vectordb()
 
-    dataset_selector = {
-            "MOCK": {"source": "./tests/mock_data/",  "func": process_pdf_docs,},
-        "BIOASQ": {"source": "huggingface", "func": process_hf_ds}
-    }
-   
-    try: 
-        ds_conf = dataset_selector.get(dataset)
-    except KeyError:
-        print("Invalid DATASET value")
-
     processor_func = ds_conf["func"]
     docs = processor_func(ds_conf["source"])
+
+    source_field = ds_conf["source_field"]
     
-    idx_results = index_documents(docs,vdb)
+    idx_results = index_documents(docs,vdb, source_field)
     print(f"Indexing Result: {idx_results}")
 
     
