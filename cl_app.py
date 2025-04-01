@@ -1,11 +1,17 @@
 import os
 import chainlit as cl
+from typing import Annotated
 from chainlit.input_widget import Select, TextInput
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
-from langchain.schema import StrOutputParser
-from langchain.schema.runnable import RunnableConfig, RunnablePassthrough
-from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.tools import tool
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain.schema.runnable.config import RunnableConfig
+from langgraph.prebuilt import ToolNode
+from langgraph.graph import MessagesState, StateGraph
+from langgraph.graph import END
+from langgraph.prebuilt import ToolNode, tools_condition
+
 from vectordb import get_vectordb
 
 openai_settings = {   
@@ -62,6 +68,8 @@ model_selector = {
 #default model
 model = openai_model
 
+
+#TODO: Load the abbreviations doc into the system prompt
 template = """
 you are a peer-like virtual assistant that has reference and database of knowledge to assist providers and staff in answering clinical questions. Respond in a concise, text-style manner that mirrors the user's tone and style, but lean towards technical and medical language.
 
@@ -79,7 +87,79 @@ prompt = ChatPromptTemplate.from_template(template)
 def format_docs(docs):
     return "\n\n".join([d.page_content for d in docs])
 
-retriever = vectordb.as_retriever(search_kwargs = {"k":10})
+#retriever = vectordb.as_retriever(search_kwargs = {"k":10})
+
+graph_builder = StateGraph(MessagesState)
+
+@tool(response_format="content_and_artifact")
+def retrieve(query: str): 
+    """Retrieve chunks related to the input query"""
+    retrieved_docs = vectordb.similarity_search(query, k=2)
+    serialized = "\n\n".join(
+        (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
+        for doc in retrieved_docs
+    )
+    return serialized, retrieved_docs
+
+def query_or_respond(state: MessagesState): 
+    """Generate tool call for retrieval or base response"""
+    llm_with_tools = model.bind_tools([retrieve])
+    response = llm_with_tools.invoke(state["messages"])
+    return {"messages": [response]}
+
+
+tools = ToolNode([retrieve])
+
+def generate(state: MessagesState): 
+    """Generate answer."""
+    # Get generated ToolMessages
+    recent_tool_messages = []
+    for message in reversed(state["messages"]):
+        if message.type == "tool":
+            recent_tool_messages.append(message)
+        else:
+            break
+    tool_messages = recent_tool_messages[::-1]
+
+    # Format into prompt
+    docs_content = "\n\n".join(doc.content for doc in tool_messages)
+    system_message_content = (
+        "You are an assistant for question-answering tasks. "
+        "Use the following pieces of retrieved context to answer "
+        "the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the "
+        "answer concise."
+        "\n\n"
+        f"{docs_content}"
+    )
+    conversation_messages = [
+        message
+        for message in state["messages"]
+        if message.type in ("human", "system")
+        or (message.type == "ai" and not message.tool_calls)
+    ]
+    prompt = [SystemMessage(system_message_content)] + conversation_messages
+
+    # Run
+    response = model.invoke(prompt)
+    return {"messages": [response]}
+
+
+graph_builder.add_node(query_or_respond)
+graph_builder.add_node(tools)
+graph_builder.add_node(generate)
+
+graph_builder.set_entry_point("query_or_respond")
+graph_builder.add_conditional_edges(
+    "query_or_respond",
+    tools_condition,
+    {END: END, "tools": "tools"},
+)
+
+graph_builder.add_edge("tools", "generate")
+graph_builder.add_edge("generate", END)
+
+graph = graph_builder.compile()
 
 @cl.on_chat_start
 async def start():
@@ -96,16 +176,6 @@ async def start():
         ],
     ).send()
 
-    runnable_sequence = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt 
-        | model
-        | StrOutputParser()
-
-    )
-
-    cl.user_session.set("runnable", runnable_sequence)
-
     await cl.Message(content="Connected to RejuvenAI!").send()
 
 
@@ -121,60 +191,26 @@ async def setup_agent(settings):
 
     print("new settings received", settings)
     model = model_selector.get(model_name)
-    
-    print("setting new model")
 
-    rs = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt 
-        | model
-        | StrOutputParser()
-
-    )
-
-    cl.user_session.set("runnable", rs)
-    print("set the new runnable seq successfully")
-    
 
 
 @cl.on_message
-async def on_message(message: cl.Message):
+async def on_message(msg: cl.Message):
+    final_answer = cl.Message(content="")
+    config = {"configurable": {"thread_id": cl.context.session.id}}
+    cb = cl.LangchainCallbackHandler()
 
-    runnable = cl.user_session.get("runnable")
+    for step, metadata in graph.stream(
+        {"messages": [{"role": "user", "content": msg.content}]},
+        stream_mode="messages",
 
-    msg = cl.Message(content="")
+    ): 
+        #step["messages"][-1].pretty_print()
+        await final_answer.stream_token(step.content)
 
-    class PostMessageHandler(BaseCallbackHandler):
-        """
-        Callback handler for handling the retriever and LLM processes.
-        Used to post the sources of the retrieved documents as a Chainlit element.
-        """
 
-        def __init__(self, msg: cl.Message):
-            BaseCallbackHandler.__init__(self)
-            self.msg = msg
-            self.sources = set()  # To store unique pairs
+    await final_answer.send()
 
-        def on_retriever_end(self, documents, *, run_id, parent_run_id, **kwargs):
-            for d in documents:
-                source_page_pair = (d.metadata["source"], d.metadata["page"])
-                self.sources.add(source_page_pair)  # Add unique pairs to the set
 
-        def on_llm_end(self, response, *, run_id, parent_run_id, **kwargs):
-            if len(self.sources):
-                sources_text = "\n".join(
-                    [f"{source}#page={page}" for source, page in self.sources]
-                )
-                self.msg.elements.append(
-                    cl.Text(name="Sources", content=sources_text, display="inline")
-                )
 
-    async for chunk in runnable.astream(
-        message.content,
-        config=RunnableConfig(
-            callbacks=[cl.LangchainCallbackHandler(), PostMessageHandler(msg)]
-        ),
-    ):
-        await msg.stream_token(chunk)
 
-    await msg.send()

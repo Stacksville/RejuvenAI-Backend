@@ -1,6 +1,8 @@
 # app
 .files/
 data/prod_data/
+vdb_rejuvenai/
+record_manager_cache.sql
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
