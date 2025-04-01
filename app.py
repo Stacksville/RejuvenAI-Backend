@@ -1,15 +1,12 @@
 import os
 from contextlib import asynccontextmanager
 
-# import chainlit as cl
 from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
-import uvicorn
 from config.db import Base
 from config.db import engine
 from config.middleware import exceptions_middleware
 from config.router import API_ROUTER
-from config.fastapi import app_settings, AppEnv
 from populate import load_knowledge_base
 
 
@@ -25,7 +22,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-# app = FastAPI()
 
 mount_chainlit(app=app, target="cl_app.py", path="/chat")
 
@@ -51,12 +47,15 @@ cl_app.add_middleware(
 """
 
 # Authentication Hook
+# import chainlit as cl
 # @cl.on_auth
 # def authenticate(token: str):
 #     if is_logged_in():
 #         return {"username": "admin", "role": "admin"}  # Successful authentication
 #     return None  # Deny access
 
-# DEBUG MODE
-if app_settings.APP_ENV == AppEnv.LOCAL:
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# DEBUG MODE (Uncomment while debugging)
+# import uvicorn
+# from config.fastapi import app_settings, AppEnv
+# if app_settings.APP_ENV == AppEnv.LOCAL:
+#     uvicorn.run(app, host="0.0.0.0", port=8000)

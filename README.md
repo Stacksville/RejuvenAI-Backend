@@ -11,4 +11,11 @@ docker build -t rejuvenai .
 ```bash
 docker run -it -p 8000:8000 rejuvenai
 ```
-```
+
+### Debug Model Setup
+Script: `app.py` </br>
+Root: `RejuvenAI-Backend`
+
+### FastAPI
+Swagger: `app-endpoint/docs` </br>
+Run: `uvicorn app:app --reload`

@@ -3,7 +3,7 @@ from traceback import print_exception
 from starlette.requests import Request
 from starlette.responses import Response
 
-from config.fastapi import app_settings
+from config.fastapi import app_settings, AppEnv
 
 
 async def exceptions_middleware(request: Request, call_next):
@@ -14,7 +14,7 @@ async def exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        if app_settings.DEBUG:
+        if app_settings.APP_ENV != AppEnv.PROD:
             # Print exception traceback only in LOCAL or DEV environment
             print_exception(e)
         return Response("Internal server error", status_code=500)

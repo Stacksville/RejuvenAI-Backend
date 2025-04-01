@@ -1,12 +1,6 @@
 from enum import Enum
-
+import os
 from pydantic_settings import BaseSettings
-
-JWT_PUBLIC_KEY = """
-"""
-
-JWT_PRIVATE_KEY = """
-"""
 
 
 class AppEnv(Enum):
@@ -22,25 +16,21 @@ class AppEnv(Enum):
 
 
 class Settings(BaseSettings):
-    SERVER_NAME: str = "RejuvenAI"
+    SERVER_NAME: str = "Rejuven AI"
     # LOG_FILE: str = "/var/log/rejuvenAI.log"
-    APP_ENV: AppEnv = AppEnv.LOCAL
-    DEBUG: bool = True
+    APP_ENV: AppEnv = os.environ["ENVIRONMENT"]
 
+    # AWS & S3 Configs
+    AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", default="")
+    AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", default="")
+    S3_AWS_REGION: str = os.getenv("AWS_SECRET_ACCESS_KEY", default="us-east-2")
+    S3_BUCKET_NAME: str = os.getenv("AWS_SECRET_ACCESS_KEY", default="rejuvenai-staging")
 
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    S3_AWS_REGION: str = "us-east-2"
-    S3_BUCKET_NAME: str = "rejuvenai-staging"
-
-    # AWS S3 Configs
-    JWT_PUBLIC_KEY: str = JWT_PUBLIC_KEY
-    JWT_PRIVATE_KEY: str = JWT_PRIVATE_KEY
-    JWT_SIGNATURE_ALGORITHM: str = "RS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
-
-    # JWT: JWTConfigs = JWTConfigs
-    # S3: S3Bucket = S3Bucket
+    # JWT Configs
+    JWT_PUBLIC_KEY: str = os.environ["JWT_PUBLIC_KEY"]
+    JWT_PRIVATE_KEY: str = os.environ["JWT_PRIVATE_KEY"]
+    JWT_SIGNATURE_ALGORITHM: str = os.getenv("JWT_SIGNATURE_ALGORITHM", default="RS256")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", default=45)
 
 
 app_settings = Settings()
