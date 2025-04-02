@@ -27,7 +27,7 @@ openai_settings = {
 }
 
 deepseek_settings = {
-    "model": "deepseek-reasoner",
+    "model": "deepseek-chat",
     #"temperature": 1.0,
     "max_tokens": 4500,
     "top_p": 1,
@@ -60,7 +60,7 @@ deepseek_model = ChatOpenAI(**deepseek_settings)
 gemini_model = ChatOpenAI(**gemini_settings)
 
 model_selector = {
-        "Deepseek R1": deepseek_model,
+        "Deepseek v3": deepseek_model,
         "gpt-4": openai_model,
         "gemini-1.5-pro": gemini_model,
 }
@@ -171,7 +171,7 @@ async def start():
             Select(
                 id="model",
                 label="LLM Model",
-                values=["gpt-4", "Deepseek R1", "gemini-1.5-pro"],
+                values=["gpt-4", "Deepseek v3", "gemini-1.5-pro"],
                 initial_index=0,
             ),
             TextInput(id="instruction",label="Instruction"),
@@ -199,7 +199,7 @@ async def setup_agent(settings):
 @cl.on_message
 async def on_message(msg: cl.Message):
     final_answer = cl.Message(content="")
-    config = {"configurable": {"thread_id": cl.context.session.id}}
+    #config = {"configurable": {"thread_id": cl.context.session.id}}
     cb = cl.LangchainCallbackHandler()
     sources = set()
 
