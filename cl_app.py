@@ -200,13 +200,14 @@ async def setup_agent(settings):
 async def on_message(msg: cl.Message):
     final_answer = cl.Message(content="")
     config = {"configurable": {"thread_id": cl.context.session.id}}
-
+    cb = cl.LangchainCallbackHandler()
     sources = set()
 
 
     for step, metadata in graph.stream(
         {"messages": [{"role": "user", "content": msg.content}]},
         stream_mode="messages",
+        config=RunnableConfig(callbacks=[cb])
 
     ): 
         #step["messages"][-1].pretty_print()
