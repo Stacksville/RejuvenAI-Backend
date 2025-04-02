@@ -95,11 +95,13 @@ graph_builder = StateGraph(MessagesState)
 def retrieve(query: str): 
     """Retrieve chunks related to the input query"""
     retrieved_docs = vectordb.similarity_search(query, k=2)
-    serialized = "\n\n".join(
-        (f"Source: {doc.metadata}\n" f"Content: {doc.page_content}")
-        for doc in retrieved_docs
-    )
-    return serialized, retrieved_docs
+    serialized = format_docs(retrieved_docs)
+    sources = set()
+    for d in retrieved_docs: 
+        source_page_pair = (d.metadata["source"], d.metadata["page"])
+        sources.add(source_page_pair)
+
+    return serialized, sources
 
 def query_or_respond(state: MessagesState): 
     """Generate tool call for retrieval or base response"""
@@ -198,7 +200,9 @@ async def setup_agent(settings):
 async def on_message(msg: cl.Message):
     final_answer = cl.Message(content="")
     config = {"configurable": {"thread_id": cl.context.session.id}}
-    cb = cl.LangchainCallbackHandler()
+
+    sources = set()
+
 
     for step, metadata in graph.stream(
         {"messages": [{"role": "user", "content": msg.content}]},
@@ -206,8 +210,26 @@ async def on_message(msg: cl.Message):
 
     ): 
         #step["messages"][-1].pretty_print()
+        if (
+            step.content
+            and metadata["langgraph_node"] == "tools"
+        ): 
+            sources = step.artifact
+            continue #skip tool output (retrieval chunks)
+
         await final_answer.stream_token(step.content)
 
+    if len(sources): 
+        sources_text = "\n".join(
+            [f"{source}#page={page}" for source, page in sources]
+        )
+        source_element = [cl.Text(name="Sources", content=sources_text, display="inline")]
+
+
+        await cl.Message(
+            content="",
+            elements=source_element,
+        ).send()
 
     await final_answer.send()
 
