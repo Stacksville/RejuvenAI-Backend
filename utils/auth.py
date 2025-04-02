@@ -33,12 +33,21 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
                       algorithm=app_settings.JWT_SIGNATURE_ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+    """
+    Validates JWT and returns username
+    :param token: JWT Token
+    :return: username
+    """
     try:
         payload = jwt.decode(token, app_settings.JWT_PUBLIC_KEY, algorithms=[app_settings.JWT_SIGNATURE_ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         return username
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Token")
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")

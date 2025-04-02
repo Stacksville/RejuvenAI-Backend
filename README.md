@@ -19,3 +19,8 @@ Root: `RejuvenAI-Backend`
 ### FastAPI
 Swagger: `app-endpoint/docs` </br>
 Run: `uvicorn app:app --reload`
+
+
+### Endpoints:
+Chat: http://127.0.0.1:8000/chat/</br>
+Backend: http://127.0.0.1:8000/docs/

@@ -46,14 +46,6 @@ cl_app.add_middleware(
 )
 """
 
-# Authentication Hook
-# import chainlit as cl
-# @cl.on_auth
-# def authenticate(token: str):
-#     if is_logged_in():
-#         return {"username": "admin", "role": "admin"}  # Successful authentication
-#     return None  # Deny access
-
 # DEBUG MODE (Uncomment while debugging)
 # import uvicorn
 # from config.fastapi import app_settings, AppEnv

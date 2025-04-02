@@ -181,3 +181,4 @@ cython_debug/
 
 # Local Database
 *.db
+*.sql
