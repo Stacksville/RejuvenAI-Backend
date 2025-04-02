@@ -1,11 +1,10 @@
 import os
 import chainlit as cl
-from typing import Annotated
 from chainlit.input_widget import Select, TextInput
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage
 from langchain.schema.runnable.config import RunnableConfig
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import MessagesState, StateGraph
