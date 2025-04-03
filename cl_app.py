@@ -10,6 +10,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.graph import MessagesState, StateGraph
 from langgraph.graph import END
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
 
 from vectordb import get_vectordb
 
@@ -92,7 +93,7 @@ graph_builder = StateGraph(MessagesState)
 
 @tool(response_format="content_and_artifact")
 def retrieve(query: str): 
-    """Retrieve chunks related to the input query"""
+    """Retrieve information to answer questions related to science"""
     retrieved_docs = vectordb.similarity_search(query, k=2)
     serialized = format_docs(retrieved_docs)
     sources = set()
@@ -145,7 +146,6 @@ def generate(state: MessagesState):
     response = model.invoke(prompt)
     return {"messages": [response]}
 
-
 graph_builder.add_node(query_or_respond)
 graph_builder.add_node(tools)
 graph_builder.add_node(generate)
@@ -160,7 +160,9 @@ graph_builder.add_conditional_edges(
 graph_builder.add_edge("tools", "generate")
 graph_builder.add_edge("generate", END)
 
-graph = graph_builder.compile()
+memory = MemorySaver()
+
+graph = graph_builder.compile(checkpointer=memory)
 
 @cl.on_chat_start
 async def start():
@@ -198,7 +200,7 @@ async def setup_agent(settings):
 @cl.on_message
 async def on_message(msg: cl.Message):
     final_answer = cl.Message(content="")
-    #config = {"configurable": {"thread_id": cl.context.session.id}}
+    config = {"configurable": {"thread_id": cl.context.session.id}}
     cb = cl.LangchainCallbackHandler()
     sources = set()
 
@@ -206,7 +208,7 @@ async def on_message(msg: cl.Message):
     for step, metadata in graph.stream(
         {"messages": [{"role": "user", "content": msg.content}]},
         stream_mode="messages",
-        config=RunnableConfig(callbacks=[cb])
+        config=RunnableConfig(callbacks=[cb], **config),
 
     ): 
         #step["messages"][-1].pretty_print()
