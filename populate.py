@@ -19,7 +19,7 @@ def process_pdf_docs(datasource_path: str) -> list[Document]:
     directory = Path(datasource_path)
     docs = []  ##type: List[Document]
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=500)
 
     extensions  = ["*.pdf", "*.docx"]
     files = list(itertools.chain.from_iterable(directory.glob(ext) for ext in extensions))

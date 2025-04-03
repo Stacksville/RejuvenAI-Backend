@@ -1,10 +1,12 @@
 import os
 import chainlit as cl
 from chainlit.input_widget import Select, TextInput
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.exceptions import TracerException
 from langchain.schema.runnable.config import RunnableConfig
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import MessagesState, StateGraph
@@ -87,14 +89,12 @@ prompt = ChatPromptTemplate.from_template(template)
 def format_docs(docs):
     return "\n\n".join([d.page_content for d in docs])
 
-#retriever = vectordb.as_retriever(search_kwargs = {"k":10})
-
 graph_builder = StateGraph(MessagesState)
 
 @tool(response_format="content_and_artifact")
 def retrieve(query: str): 
     """Retrieve information to answer questions related to science"""
-    retrieved_docs = vectordb.similarity_search(query, k=2)
+    retrieved_docs = vectordb.similarity_search(query, k=10)
     serialized = format_docs(retrieved_docs)
     sources = set()
     for d in retrieved_docs: 
@@ -201,17 +201,29 @@ async def setup_agent(settings):
 async def on_message(msg: cl.Message):
     final_answer = cl.Message(content="")
     config = {"configurable": {"thread_id": cl.context.session.id}}
-    cb = cl.LangchainCallbackHandler()
     sources = set()
+
+    class PostMessageHandler(BaseCallbackHandler):
+        """
+        CallBackHandler to inspect the rewritten query
+        """
+
+        def __init__(self):
+            BaseCallbackHandler.__init__(self,)
+            BaseCallbackHandler.raise_error = False
+
+        def on_tool_start(self, serialized: dict, input_str: str, *, run_id, parent_run_id = None, tags = None, metadata = None, inputs = None, **kwargs,):
+            print(f"Executing retrieval with input: {input_str}")
 
 
     for step, metadata in graph.stream(
         {"messages": [{"role": "user", "content": msg.content}]},
         stream_mode="messages",
-        config=RunnableConfig(callbacks=[cb], **config),
+        config=RunnableConfig(callbacks=[PostMessageHandler()], **config),
 
     ): 
         #step["messages"][-1].pretty_print()
+        # get sources from the tool run
         if (
             step.content
             and metadata["langgraph_node"] == "tools"
@@ -221,7 +233,7 @@ async def on_message(msg: cl.Message):
 
         await final_answer.stream_token(step.content)
 
-    if len(sources): 
+    if sources and len(sources): 
         sources_text = "\n".join(
             [f"{source}#page={page}" for source, page in sources]
         )
@@ -234,6 +246,7 @@ async def on_message(msg: cl.Message):
         ).send()
 
     await final_answer.send()
+
 
 
 
