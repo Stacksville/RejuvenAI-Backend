@@ -2,12 +2,13 @@ import os
 from contextlib import asynccontextmanager
 
 from chainlit.utils import mount_chainlit
+from fastapi import Depends, HTTPException
 from fastapi import FastAPI
-from config.db import Base
-from config.db import engine
-from config.middleware import exceptions_middleware
-from config.router import API_ROUTER
+from sqlalchemy.orm import Session
+
+from db import Users, get_db
 from populate import load_knowledge_base
+from utils import verify_password, create_access_token, get_password_hash
 
 
 @asynccontextmanager
@@ -25,17 +26,6 @@ app = FastAPI(lifespan=lifespan)
 
 mount_chainlit(app=app, target="cl_app.py", path="/chat")
 
-VERSION = 1
-
-# API Router Configurations
-app.include_router(API_ROUTER, prefix=f"/api/v{VERSION}")
-
-# Database Configurations
-Base.metadata.create_all(bind=engine)
-
-# Middleware Configurations
-app.middleware('http')(exceptions_middleware)
-
 """
 cl_app.add_middleware(
     CORSMiddleware,
@@ -46,8 +36,35 @@ cl_app.add_middleware(
 )
 """
 
-# DEBUG MODE (Uncomment while debugging)
-# import uvicorn
-# from config.fastapi import app_settings, AppEnv
-# if app_settings.APP_ENV == AppEnv.LOCAL:
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+from pydantic import BaseModel
+
+
+class LoginRequestSchema(BaseModel):
+    username: str
+    password: str
+
+
+@app.get("/login")
+def login(login_form: LoginRequestSchema, db: Session = Depends(get_db)):
+    # curl -X POST "http://127.0.0.1:8000/login" -d "username=testuser&password=1234"
+    user = db.query(Users).filter(Users.username == login_form.username).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    if not verify_password(login_form.password, user.password):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+
+    payload = {"username": user.username, "identity": "admin", "role": "admin"}
+    token = create_access_token({"sub": user.username, "data": payload})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/register")
+def register(username: str, password: str, db: Session = Depends(get_db)):
+    # curl -X POST "http://127.0.0.1:8000/register?username=testuser&password=1234"
+    user = db.query(Users).filter(Users.username == username).first()
+    if user:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    new_user = Users(username=username, password=get_password_hash(password))
+    db.add(new_user)
+    db.commit()
+    return {"message": "User registered successfully"}

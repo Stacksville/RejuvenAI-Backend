@@ -4,9 +4,18 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
+from pydantic_settings import BaseSettings
 from starlette import status
 
-from config.fastapi import app_settings
+
+class Settings(BaseSettings):
+    JWT_PUBLIC_KEY: str = ""
+    JWT_PRIVATE_KEY: str = ""
+    JWT_SIGNATURE_ALGORITHM: str = "RS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
+
+
+app_settings = Settings()
 
 # Password Hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
