@@ -1,5 +1,8 @@
-# chainlit 
+# app
 .files/
+data/prod_data/
+vdb_rejuvenai/
+record_manager_cache.sql
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -182,3 +185,5 @@ cython_debug/
 # Local Database
 *.db
 *.sql
+#mac
+.DS_Store
