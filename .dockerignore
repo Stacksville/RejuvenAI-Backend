@@ -1,5 +1,6 @@
 __pycache__/
 .git/
+data/prod_data.gpg
 .files/
 vdb_rejuvenai/
 record_manager_cache.sql

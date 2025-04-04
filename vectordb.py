@@ -2,6 +2,7 @@ from langchain_chroma import Chroma
 from langchain_core.vectorstores import VectorStore
 from langchain_openai import OpenAIEmbeddings
 
+EMBEDDING_MODEL="text-embedding-3-large"
 
 def get_vectordb()-> VectorStore: 
     """
@@ -10,7 +11,7 @@ def get_vectordb()-> VectorStore:
         Action is idempotent. 
     """
 
-    embeddings_model = OpenAIEmbeddings(model="text-embedding-3-large")
+    embeddings_model = OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
     db_name = "vdb_rejuvenai"
 

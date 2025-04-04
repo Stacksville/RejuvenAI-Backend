@@ -203,6 +203,8 @@ async def on_message(msg: cl.Message):
     config = {"configurable": {"thread_id": cl.context.session.id}}
     sources = set()
 
+    cb = cl.LangchainCallbackHandler()
+
     class PostMessageHandler(BaseCallbackHandler):
         """
         CallBackHandler to inspect the rewritten query
@@ -215,11 +217,14 @@ async def on_message(msg: cl.Message):
         def on_tool_start(self, serialized: dict, input_str: str, *, run_id, parent_run_id = None, tags = None, metadata = None, inputs = None, **kwargs,):
             print(f"Executing retrieval with input: {input_str}")
 
+        def on_tool_end(self, output, *, run_id, parent_run_id = None, **kwargs):
+            pass
+
 
     for step, metadata in graph.stream(
         {"messages": [{"role": "user", "content": msg.content}]},
         stream_mode="messages",
-        config=RunnableConfig(callbacks=[PostMessageHandler()], **config),
+        config=RunnableConfig(callbacks=[cb,PostMessageHandler()], **config),
 
     ): 
         #step["messages"][-1].pretty_print()
