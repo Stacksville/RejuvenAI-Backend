@@ -187,3 +187,4 @@ cython_debug/
 *.sql
 #mac
 .DS_Store
+/run.sh

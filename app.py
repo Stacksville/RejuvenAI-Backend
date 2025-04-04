@@ -44,7 +44,7 @@ class LoginRequestSchema(BaseModel):
     password: str
 
 
-@app.get("/login")
+@app.post("/login")
 def login(login_form: LoginRequestSchema, db: Session = Depends(get_db)):
     # curl -X POST "http://127.0.0.1:8000/login" -d "username=testuser&password=1234"
     user = db.query(Users).filter(Users.username == login_form.username).first()
@@ -53,7 +53,7 @@ def login(login_form: LoginRequestSchema, db: Session = Depends(get_db)):
     if not verify_password(login_form.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    payload = {"username": user.username, "identity": "admin", "role": "admin"}
+    payload = {"identity": "admin", "role": "admin"}
     token = create_access_token({"sub": user.username, "data": payload})
     return {"access_token": token, "token_type": "bearer"}
 

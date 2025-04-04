@@ -7,8 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from starlette import status
 
-JWT_PRIVATE_KEY_PATH = os.getenv("JWT_PRIVATE_KEY_PATH", default="~/.secrets/rejuvneAIjwtRS256.key")
-JWT_PUBLIC_KEY_PATH = os.getenv("JWT_PUBLIC_KEY_PATH", default="~/.secrets/rejuvneAIjwtRS256.key.pub")
+JWT_PRIVATE_KEY_PATH = os.getenv("JWT_PRIVATE_KEY_PATH", default="/home/ubuntu/.secrets/rejuvneAIjwtRS256.key")
+JWT_PUBLIC_KEY_PATH = os.getenv("JWT_PUBLIC_KEY_PATH", default="/home/ubuntu/.secrets/rejuvneAIjwtRS256.key.pub")
 
 
 def get_jwt_private_key() -> str:

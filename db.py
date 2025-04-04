@@ -5,22 +5,7 @@ from sqlalchemy import Integer, DateTime, Boolean
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import declared_attr
-from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import sessionmaker
-
-
-class Users:
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
-
-    id = mapped_column(Integer, primary_key=True, unique=True)
-    username = Column(String, nullable=False, unique=True)
-    password = Column(String, nullable=False)  # stores hashed password
-    updated_on = Column(DateTime, nullable=True)
-    created_on = Column(DateTime, default=datetime.now(tz=timezone.utc))
-    is_deleted = Column(Boolean, default=False)
-
 
 LOCALHOST_DATABASE_URL = "postgresql://chainlit_user:yourpassword@localhost:5432/chainlit_db"
 # DATABASE_URL = os.getenv("DATABASE_URL", default=LOCALHOST_DATABASE_URL)
@@ -38,4 +23,16 @@ def get_db():
 
 
 Base = declarative_base()
+
+
+class Users(Base):
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+
+    id = Column(Integer, primary_key=True, unique=True)
+    username = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
+
+
 Base.metadata.create_all(bind=engine)
