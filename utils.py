@@ -1,16 +1,29 @@
+import os
 from datetime import timedelta, datetime, timezone
 
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from pydantic_settings import BaseSettings
 from starlette import status
 
+JWT_PRIVATE_KEY_PATH = os.getenv("JWT_PRIVATE_KEY_PATH", default="~/.secrets/rejuvneAIjwtRS256.key")
+JWT_PUBLIC_KEY_PATH = os.getenv("JWT_PUBLIC_KEY_PATH", default="~/.secrets/rejuvneAIjwtRS256.key.pub")
 
-class Settings(BaseSettings):
-    JWT_PUBLIC_KEY: str = ""
-    JWT_PRIVATE_KEY: str = ""
+
+def get_jwt_private_key() -> str:
+    with open(JWT_PRIVATE_KEY_PATH, "r") as file:
+        return file.read()
+
+
+def get_jwt_public_key() -> str:
+    with open(JWT_PUBLIC_KEY_PATH, "r") as file:
+        return file.read()
+
+
+class Settings:
+    JWT_PRIVATE_KEY: str = get_jwt_private_key()
+    JWT_PUBLIC_KEY: str = get_jwt_public_key()
     JWT_SIGNATURE_ALGORITHM: str = "RS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
 
