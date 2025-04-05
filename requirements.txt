@@ -173,3 +173,6 @@ xxhash==3.5.0
 yarl==1.18.3
 zipp==3.21.0
 zstandard==0.23.0
+python-jose==3.3.0
+passlib==1.7.4
+cryptography==44.0.2

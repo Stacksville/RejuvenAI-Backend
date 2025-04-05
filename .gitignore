@@ -179,5 +179,12 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-#mac 
+# PyCharm files
+.idea
+
+# Local Database
+*.db
+*.sql
+#mac
 .DS_Store
+/run.sh
