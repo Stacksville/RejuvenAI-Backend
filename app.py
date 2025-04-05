@@ -46,21 +46,20 @@ class LoginRequestSchema(BaseModel):
 
 @app.post("/login")
 def login(login_form: LoginRequestSchema, db: Session = Depends(get_db)):
-    # curl -X POST "http://127.0.0.1:8000/login" -d "username=testuser&password=1234"
     user = db.query(Users).filter(Users.username == login_form.username).first()
     if not user:
         raise HTTPException(status_code=400, detail="Invalid credentials")
     if not verify_password(login_form.password, user.password):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    payload = {"identity": "admin", "role": "admin"}
-    token = create_access_token({"sub": user.username, "data": payload})
+    # "provider": "header" | "role": "user"
+    payload = {"identity": user.username, "role": "admin", "provider": "jwt"}
+    token = create_access_token({"sub": user.username, "payload": payload})
     return {"access_token": token, "token_type": "bearer"}
 
 
-@app.get("/register")
+# @app.get("/register")
 def register(username: str, password: str, db: Session = Depends(get_db)):
-    # curl -X POST "http://127.0.0.1:8000/register?username=testuser&password=1234"
     user = db.query(Users).filter(Users.username == username).first()
     if user:
         raise HTTPException(status_code=400, detail="Username already taken")
@@ -68,3 +67,7 @@ def register(username: str, password: str, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     return {"message": "User registered successfully"}
+
+# DEBUG MODE (Uncomment while debugging)
+# import uvicorn
+# uvicorn.run(app, host="0.0.0.0", port=8000)

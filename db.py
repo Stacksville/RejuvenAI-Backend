@@ -1,7 +1,5 @@
-from datetime import timezone, datetime
-
 from sqlalchemy import Column, String
-from sqlalchemy import Integer, DateTime, Boolean
+from sqlalchemy import Integer
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import declared_attr

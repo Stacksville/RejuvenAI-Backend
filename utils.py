@@ -7,8 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from starlette import status
 
-JWT_PRIVATE_KEY_PATH = os.getenv("JWT_PRIVATE_KEY_PATH", default="/home/ubuntu/.secrets/rejuvneAIjwtRS256.key")
-JWT_PUBLIC_KEY_PATH = os.getenv("JWT_PUBLIC_KEY_PATH", default="/home/ubuntu/.secrets/rejuvneAIjwtRS256.key.pub")
+JWT_PRIVATE_KEY_PATH = os.getenv("JWT_PRIVATE_KEY_PATH", default="/home/ubuntu/.secrets/jwt_rsa")
+JWT_PUBLIC_KEY_PATH = os.getenv("JWT_PUBLIC_KEY_PATH", default="/home/ubuntu/.secrets/jwt_rsa.pub")
 
 
 def get_jwt_private_key() -> str:
@@ -25,7 +25,7 @@ class Settings:
     JWT_PRIVATE_KEY: str = get_jwt_private_key()
     JWT_PUBLIC_KEY: str = get_jwt_public_key()
     JWT_SIGNATURE_ALGORITHM: str = "RS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 45
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
 
 app_settings = Settings()
@@ -55,7 +55,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
                       algorithm=app_settings.JWT_SIGNATURE_ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     """
     Validates JWT and returns username
     :param token: JWT Token
@@ -63,10 +63,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     """
     try:
         payload = jwt.decode(token, app_settings.JWT_PUBLIC_KEY, algorithms=[app_settings.JWT_SIGNATURE_ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        if not payload:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        return username
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token Expired")
     except jwt.InvalidTokenError:
